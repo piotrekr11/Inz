@@ -21,7 +21,8 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
   int imageWidth = 0;
   int imageHeight = 0;
 
-  Rect selectionRect = const Rect.fromLTWH(50, 50, 200, 200);
+  Rect selectionRect = Rect.zero;
+  bool selectionInitialized = false;
   bool isDragging = false;
   Offset? dragStart;
   String dragEdge = '';
@@ -68,6 +69,19 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
 
     displaySize = Size(displayWidth, displayHeight);
     imageOffset = Offset(offsetX, offsetY);
+    _initializeSelectionRectIfNeeded();
+  }
+
+  void _initializeSelectionRectIfNeeded() {
+    if (selectionInitialized || displaySize == Size.zero) return;
+
+    final rectWidth = displaySize.width * 0.6;
+    final rectHeight = displaySize.height * 0.6;
+    final left = imageOffset.dx + (displaySize.width - rectWidth) / 2;
+    final top = imageOffset.dy + (displaySize.height - rectHeight) / 2;
+
+    selectionRect = Rect.fromLTWH(left, top, rectWidth, rectHeight);
+    selectionInitialized = true;
   }
 
   void _onPanStart(DragStartDetails details, String edge) {
@@ -229,10 +243,8 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
                     ),
                     Positioned.fromRect(
                       rect: selectionRect,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.redAccent, width: 2),
-                        ),
+                      child: CustomPaint(
+                        painter: _SelectionBorderPainter(),
                       ),
                     ),
                     _buildEdgeHandle('left'),
@@ -254,4 +266,27 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
       ),
     );
   }
+}
+class _SelectionBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+
+    final outlinePaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+
+    final innerPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    // Slight deflate keeps strokes within bounds and ensures the outline is visible.
+    canvas.drawRect(rect.deflate(0.5), outlinePaint);
+    canvas.drawRect(rect.deflate(0.5), innerPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
