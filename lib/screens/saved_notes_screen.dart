@@ -65,6 +65,10 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
   }
 
   void deleteNote(int index) async {
+    final imageFile = File(notes[index].imagePath);
+    if (await imageFile.exists()) {
+      await imageFile.delete();
+    }
     await files[index].delete();
     setState(() {
       notes.removeAt(index);

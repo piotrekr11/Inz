@@ -1,5 +1,6 @@
 class Note {
   final String title;
+  final String id;
   final String text;
   final String imagePath;
   final DateTime timestamp;
@@ -8,12 +9,14 @@ class Note {
   Note({
     required this.title,
     required this.text,
+    required this.id,
     required this.imagePath,
     required this.timestamp,
     required this.categories,
   });
 
   Map<String, dynamic> toJson() => {
+    'id': id,
     'title': title,
     'text': text,
     'imagePath': imagePath,
@@ -21,17 +24,25 @@ class Note {
     'categories': categories,
   };
 
-  static Note fromJson(Map<String, dynamic> json) => Note(
-    title: json['title'] ?? '', // fallback
-    text: json['text'],
-    imagePath: json['imagePath'],
-    timestamp: DateTime.parse(json['timestamp']),
-    categories: (json['categories'] as List<dynamic>?)
-        ?.map((c) => c.toString())
-        .toList()
-        .toSet()
-        .toList() ??
-        ['All'],
-
-  );
+  static Note fromJson(Map<String, dynamic> json) {
+    final timestampString = json['timestamp']?.toString();
+    final parsedTimestamp = timestampString != null
+        ? DateTime.tryParse(timestampString)
+        : null;
+    return Note(
+      id: json['id']?.toString() ??
+          (parsedTimestamp?.millisecondsSinceEpoch.toString() ??
+              DateTime.now().millisecondsSinceEpoch.toString()),
+      title: json['title'] ?? '', // fallback
+      text: json['text'],
+      imagePath: json['imagePath'],
+      timestamp: parsedTimestamp ?? DateTime.now(),
+      categories: (json['categories'] as List<dynamic>?)
+          ?.map((c) => c.toString())
+          .toList()
+          .toSet()
+          .toList() ??
+          ['All'],
+    );
+  }
 }

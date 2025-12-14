@@ -73,6 +73,34 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
     return notesDir.path;
   }
+  Future<String> _getImagesDirectoryPath() async {
+    final notesDirPath = await _getNotesDirectoryPath();
+    final imagesDir = Directory(p.join(notesDirPath, 'images'));
+    if (!(await imagesDir.exists())) {
+      await imagesDir.create(recursive: true);
+    }
+    return imagesDir.path;
+  }
+
+  String _generateNoteId() => DateTime.now().millisecondsSinceEpoch.toString();
+
+  Future<String> _saveImageToPermanentStorage(String noteId) async {
+    final imagesDir = await _getImagesDirectoryPath();
+    final extension = p.extension(widget.imageFile.path).isNotEmpty
+        ? p.extension(widget.imageFile.path)
+        : '.jpg';
+    final targetPath = p.join(imagesDir, '$noteId$extension');
+    final targetFile = File(targetPath);
+
+    if (widget.imageFile.path != targetPath) {
+      await widget.imageFile.copy(targetPath);
+    } else if (!(await targetFile.exists())) {
+      await widget.imageFile.copy(targetPath);
+    }
+
+    return targetPath;
+  }
+
 
   Future<void> _loadAvailableCategories() async {
     final notesDirPath = await _getNotesDirectoryPath();
@@ -121,6 +149,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final title = _titleController.text.trim();
     final text = controller.text.trim();
 
+    final noteId = widget.existingNote?.id ?? _generateNoteId();
+    final savedImagePath = await _saveImageToPermanentStorage(noteId);
+
     final uniqueCategories = {
       'All',
       ...categories.where((c) => c.trim().isNotEmpty).map((c) => c.trim()),
@@ -128,8 +159,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     final note = Note(
       title: title,
+      id: noteId,
       text: text,
-      imagePath: widget.imageFile.path,
+      imagePath: savedImagePath,
       timestamp: DateTime.now(),
       categories: uniqueCategories,
     );
@@ -142,7 +174,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     } else {
       // Save as new file
       final path = await _getNotesDirectoryPath();
-      final fileName = 'note_${DateTime.now().millisecondsSinceEpoch}.json';
+      final fileName = 'note_$noteId.json';
       final file = File('$path/$fileName');
       await file.writeAsString(jsonEncode(note.toJson()));
     }
