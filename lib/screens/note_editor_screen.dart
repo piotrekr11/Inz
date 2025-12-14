@@ -27,6 +27,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final TextEditingController controller = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _newCategoryController = TextEditingController();
+  final TextEditingController _renameCategoryController = TextEditingController();
 
   List<String> availableCategories = ['All'];
   List<String> selectedCategories = ['All'];
@@ -36,6 +37,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     controller.dispose();
     _titleController.dispose();
     _newCategoryController.dispose();
+    _renameCategoryController.dispose();
     super.dispose();
   }
 
@@ -145,6 +147,69 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     });
   }
 
+  Future<void> _rewriteCategoryInStoredNotes(
+      String oldCategory, {
+        String? newCategory,
+      }) async {
+    final notesDirPath = await _getNotesDirectoryPath();
+    final notesDir = Directory(notesDirPath);
+
+    if (!(await notesDir.exists())) return;
+
+    final jsonFiles = notesDir
+        .listSync()
+        .where((f) => f.path.endsWith('.json'))
+        .cast<File>()
+        .toList();
+
+    for (final file in jsonFiles) {
+      try {
+        final content = await file.readAsString();
+        final jsonMap = jsonDecode(content) as Map<String, dynamic>;
+        final note = Note.fromJson(jsonMap);
+
+        final updatedCategories = <String>[];
+        for (final category in note.categories) {
+          if (category == oldCategory) {
+            if (newCategory != null && newCategory.isNotEmpty) {
+              if (!updatedCategories.contains(newCategory)) {
+                updatedCategories.add(newCategory);
+              }
+            }
+            continue;
+          }
+          if (!updatedCategories.contains(category)) {
+            updatedCategories.add(category);
+          }
+        }
+
+        if (!updatedCategories.contains('All')) {
+          updatedCategories.add('All');
+        }
+
+        final oldSet = note.categories.toSet();
+        final newSet = updatedCategories.toSet();
+        final changed =
+            oldSet.length != newSet.length || !newSet.containsAll(oldSet);
+
+        if (!changed) continue;
+
+        final updatedNote = Note(
+          id: note.id,
+          title: note.title,
+          text: note.text,
+          imagePath: note.imagePath,
+          timestamp: note.timestamp,
+          categories: updatedCategories,
+        );
+
+        await file.writeAsString(jsonEncode(updatedNote.toJson()));
+      } catch (_) {
+        continue;
+      }
+    }
+  }
+
   Future<void> _saveNoteWithCategories(List<String> categories) async {
     final title = _titleController.text.trim();
     final text = controller.text.trim();
@@ -202,6 +267,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   void _showCategoryDialog() {
     final tempSelected = [...selectedCategories];
+    final rootContext = context;
 
     showDialog(
       context: context,
@@ -230,6 +296,76 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                             }
                           });
                         },
+                        secondary: isAll
+                            ? null
+                            : PopupMenuButton<String>(
+                          onSelected: (action) async {
+                            if (action == 'rename') {
+                              final renamed = await _promptRenameCategory(
+                                rootContext,
+                                category,
+                              );
+                              if (renamed == null || renamed.isEmpty) {
+                                return;
+                              }
+
+                              final alreadyExists = availableCategories
+                                  .any((c) => c == renamed);
+                              if (alreadyExists) {
+                                ScaffoldMessenger.of(rootContext)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Taka kategoria już istnieje.'),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setState(() {
+                                availableCategories.remove(category);
+                                availableCategories.add(renamed);
+                                availableCategories.sort();
+                                if (selectedCategories.contains(category)) {
+                                  selectedCategories.remove(category);
+                                  selectedCategories.add(renamed);
+                                }
+                              });
+
+                              setStateDialog(() {
+                                if (tempSelected.contains(category)) {
+                                  tempSelected.remove(category);
+                                  tempSelected.add(renamed);
+                                }
+                              });
+                              await _rewriteCategoryInStoredNotes(
+                                category,
+                                newCategory: renamed,
+                              );
+                            } else if (action == 'delete') {
+                              setState(() {
+                                availableCategories.remove(category);
+                                selectedCategories.remove(category);
+                              });
+                              setStateDialog(() {
+                                tempSelected.remove(category);
+                              });
+                              await _rewriteCategoryInStoredNotes(
+                                category,
+                              );
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'rename',
+                              child: Text('Zmień nazwę'),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Usuń'),
+                            ),
+                          ],
+                        ),
                       );
                     }),
                     const Divider(),
@@ -300,6 +436,43 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ],
             );
           },
+        );
+      },
+    );
+  }
+  Future<String?> _promptRenameCategory(
+      BuildContext dialogContext,
+      String currentName,
+      ) async {
+    _renameCategoryController.text = currentName;
+
+    return showDialog<String>(
+      context: dialogContext,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Zmień nazwę kategorii'),
+          content: TextField(
+            controller: _renameCategoryController,
+            decoration: const InputDecoration(
+              labelText: 'Nazwa kategorii',
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Anuluj'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                  _renameCategoryController.text.trim(),
+                );
+              },
+              child: const Text('Zapisz'),
+            ),
+          ],
         );
       },
     );
