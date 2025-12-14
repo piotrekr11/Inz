@@ -58,9 +58,17 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
       }
     }
 
+    final paired = List.generate(
+      loadedNotes.length,
+          (index) => (note: loadedNotes[index], file: loadedFiles[index]),
+    )
+      ..sort(
+            (a, b) => b.note.timestamp.compareTo(a.note.timestamp),
+      );
+
     setState(() {
-      notes = loadedNotes;
-      files = loadedFiles;
+      notes = paired.map((pair) => pair.note).toList();
+      files = paired.map((pair) => pair.file).toList();
     });
     _updateAvailableCategories();
   }

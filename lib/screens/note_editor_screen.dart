@@ -248,6 +248,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           _newCategoryController.text.trim();
                           if (newCategory.isEmpty) return;
 
+                          final customCount =
+                              availableCategories.where((c) => c != 'All').length;
+                          final alreadyExists =
+                          availableCategories.contains(newCategory);
+
+                          if (!alreadyExists && customCount >= 10) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Możesz dodać maksymalnie 10 kategorii.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                           setState(() {
                             if (!availableCategories.contains(newCategory)) {
                               availableCategories.add(newCategory);
