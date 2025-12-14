@@ -109,6 +109,7 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
     required double min,
     required double max,
     required double step,
+    String? description,
     required void Function(double) onChanged,
     void Function(double)? onChangeEnd,
   }) {
@@ -116,6 +117,17 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('$label: ${value.toStringAsFixed(2)}'),
+        if (description != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4.0),
+            child: Text(
+              description,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey[700]),
+            ),
+          ),
         Slider(
           value: value,
           min: min,
@@ -158,6 +170,8 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
             ),
             buildSlider(
               label: 'Jasność',
+              description:
+              '0 = czarne zdjęcie, 1 = oryginalna jasność, 2 = maksymalnie rozjaśnione',
               value: brightness,
               min: 0.0,
               max: 2.0,
@@ -167,6 +181,8 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
             ),
             buildSlider(
               label: 'Kontrast',
+              description:
+              '0.7 = łagodny kontrast, 1 = oryginał, 1.3 = mocno podkreślony',
               value: contrast,
               min: 0.7,
               max: 1.3,
