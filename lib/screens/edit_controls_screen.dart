@@ -31,7 +31,17 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
   }
 
   Future<void> updatePreview() async {
+    final needsProcessing =
+        rotation != 0 || brightness != 1.0 || contrast != 1.0;
+
+    if (!needsProcessing) {
+      setState(() {
+        previewFile = originalFile;
+      });
+      return;
+    }
     final editorOption = ImageEditorOption()
+
       ..addOption(RotateOption(rotation.toInt()))
       ..addOption(ColorOption.brightness(brightness))
       ..addOption(ColorOption.contrast(contrast));
@@ -60,19 +70,26 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
   }
 
   void continueToOCR() async {
-    final finalFile = await ImageEditor.editImage(
-      image: await originalFile.readAsBytes(),
-      imageEditorOption: ImageEditorOption()
-        ..addOption(RotateOption(rotation.toInt()))
-        ..addOption(ColorOption.brightness(brightness))
-        ..addOption(ColorOption.contrast(contrast)),
-    );
+    final needsProcessing =
+        rotation != 0 || brightness != 1.0 || contrast != 1.0;
 
-    final tempDir = await getTemporaryDirectory();
-    final finalEditedFile = File(
-      '${tempDir.path}/final_edited_${DateTime.now().millisecondsSinceEpoch}.jpg',
-    );
-    await finalEditedFile.writeAsBytes(finalFile!);
+    File finalEditedFile = originalFile;
+
+    if (needsProcessing) {
+      final finalFile = await ImageEditor.editImage(
+        image: await originalFile.readAsBytes(),
+        imageEditorOption: ImageEditorOption()
+          ..addOption(RotateOption(rotation.toInt()))
+          ..addOption(ColorOption.brightness(brightness))
+          ..addOption(ColorOption.contrast(contrast)),
+      );
+
+      final tempDir = await getTemporaryDirectory();
+      finalEditedFile = File(
+        '${tempDir.path}/final_edited_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      await finalEditedFile.writeAsBytes(finalFile!);
+    }
 
     final saved = await Navigator.push(
       context,
@@ -93,6 +110,7 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
     required double max,
     required double step,
     required void Function(double) onChanged,
+    void Function(double)? onChangeEnd,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,10 +122,8 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
           max: max,
           divisions: ((max - min) / step).round(),
           label: value.toStringAsFixed(2),
-          onChanged: (val) {
-            onChanged(val);
-            updatePreview();
-          },
+          onChanged: onChanged,
+          onChangeEnd: onChangeEnd,
         ),
       ],
     );
@@ -123,9 +139,12 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Image.file(previewFile!, fit: BoxFit.contain),
+            DecoratedBox(
+              decoration: const BoxDecoration(color: Colors.white),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Image.file(previewFile!, fit: BoxFit.contain),
+              ),
             ),
             const SizedBox(height: 20),
             buildSlider(
@@ -135,6 +154,7 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
               max: 360,
               step: 1,
               onChanged: (val) => setState(() => rotation = val),
+              onChangeEnd: (_) => updatePreview(),
             ),
             buildSlider(
               label: 'Jasność',
@@ -143,6 +163,7 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
               max: 2.0,
               step: 0.01,
               onChanged: (val) => setState(() => brightness = val),
+              onChangeEnd: (_) => updatePreview(),
             ),
             buildSlider(
               label: 'Kontrast',
@@ -151,6 +172,7 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
               max: 1.3,
               step: 0.01,
               onChanged: (val) => setState(() => contrast = val),
+              onChangeEnd: (_) => updatePreview(),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
