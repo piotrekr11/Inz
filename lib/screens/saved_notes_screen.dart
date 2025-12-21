@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'note_editor_screen.dart';
 import '../models/note.dart';
 import '../data/notes_repository.dart';
+import '../widgets/saved_note_tile.dart';
 
 class SavedNotesScreen extends StatefulWidget {
   const SavedNotesScreen({Key? key}) : super(key: key);
@@ -235,67 +236,11 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
               itemBuilder: (context, index) {
                 final note = filteredNotes[index];
                 final fileIndex = notes.indexOf(note);
-                return ListTile(
-                  leading: Image.file(
-                    File(note.imagePath),
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-
-                  ),
-                  title: Text(
-                    note.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Saved: ${note.timestamp.toLocal().toString().split('.')[0]}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: note.categories
-                            .map((cat) => Chip(label: Text(cat)))
-                            .toList(),
-                      ),
-                    ],
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert),
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'edit':
-                          openNote(note, files[fileIndex]);
-                          break;
-                        case 'share':
-                          _shareNote(note);
-                          break;
-                        case 'delete':
-                          _confirmDelete(fileIndex);
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Edytuj'),
-                      ),
-                      PopupMenuItem(
-                        value: 'share',
-                        child: Text('Udostępnij'),
-                      ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Usuń'),
-                      ),
-                    ],
-                  ),
+                return SavedNoteTile(
+                  note: note,
+                  onEdit: (note) => openNote(note, files[fileIndex]),
+                  onShare: _shareNote,
+                  onDelete: () => _confirmDelete(fileIndex),
                   onTap: () => openNote(note, files[fileIndex]),
                 );
               },
