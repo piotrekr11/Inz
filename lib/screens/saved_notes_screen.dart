@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'note_editor_screen.dart';
 import '../notes_model.dart';
+import '../data/notes_repository.dart';
 
 class SavedNotesScreen extends StatefulWidget {
   const SavedNotesScreen({Key? key}) : super(key: key);
@@ -18,6 +17,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
   List<File> files = [];
   List<String> availableCategories = ['All'];
   List<String> selectedCategories = ['All'];
+  final NotesRepository _notesRepository = const NotesRepository();
 
   @override
   void initState() {
@@ -26,46 +26,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
   }
 
   Future<void> loadNotes() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final notesDir = Directory('${dir.path}/notes');
-
-    if (!(await notesDir.exists())) {
-      setState(() {
-        notes = [];
-        files = [];
-      });
-      _updateAvailableCategories();
-      return;
-    }
-
-    final jsonFiles = notesDir
-        .listSync()
-        .where((f) => f.path.endsWith('.json'))
-        .cast<File>()
-        .toList();
-
-    final loadedNotes = <Note>[];
-    final loadedFiles = <File>[];
-    for (var file in jsonFiles) {
-      try {
-        final content = await file.readAsString();
-        final json = jsonDecode(content);
-        loadedNotes.add(Note.fromJson(json));
-        loadedFiles.add(file);
-      } catch (_) {
-        // Skip malformed files instead of breaking the whole list.
-        continue;
-      }
-    }
-
-    final paired = List.generate(
-      loadedNotes.length,
-          (index) => (note: loadedNotes[index], file: loadedFiles[index]),
-    )
-      ..sort(
-            (a, b) => b.note.timestamp.compareTo(a.note.timestamp),
-      );
-
+    final paired = await _notesRepository.loadNotes();
     setState(() {
       notes = paired.map((pair) => pair.note).toList();
       files = paired.map((pair) => pair.file).toList();
@@ -74,11 +35,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
   }
 
   void deleteNote(int index) async {
-    final imageFile = File(notes[index].imagePath);
-    if (await imageFile.exists()) {
-      await imageFile.delete();
-    }
-    await files[index].delete();
+    await _notesRepository.deleteNote(notes[index], files[index]);
     setState(() {
       notes.removeAt(index);
       files.removeAt(index);

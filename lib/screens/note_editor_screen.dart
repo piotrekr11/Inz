@@ -1,9 +1,7 @@
 import 'dart:io';
-import 'dart:convert';
-import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../data/notes_repository.dart';
 import '../notes_model.dart';
 import '/utils/ocr_helper.dart';
 
@@ -28,6 +26,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _newCategoryController = TextEditingController();
   final TextEditingController _renameCategoryController = TextEditingController();
+  final NotesRepository _notesRepository = const NotesRepository();
 
   List<String> availableCategories = ['All'];
   List<String> selectedCategories = ['All'];
@@ -67,72 +66,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
 
-  Future<String> _getNotesDirectoryPath() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final notesDir = Directory('${dir.path}/notes');
-    if (!(await notesDir.exists())) {
-      await notesDir.create(recursive: true);
-    }
-    return notesDir.path;
-  }
-  Future<String> _getImagesDirectoryPath() async {
-    final notesDirPath = await _getNotesDirectoryPath();
-    final imagesDir = Directory(p.join(notesDirPath, 'images'));
-    if (!(await imagesDir.exists())) {
-      await imagesDir.create(recursive: true);
-    }
-    return imagesDir.path;
-  }
-
   String _generateNoteId() => DateTime.now().millisecondsSinceEpoch.toString();
 
-  Future<String> _saveImageToPermanentStorage(String noteId) async {
-    final imagesDir = await _getImagesDirectoryPath();
-    final extension = p.extension(widget.imageFile.path).isNotEmpty
-        ? p.extension(widget.imageFile.path)
-        : '.jpg';
-    final targetPath = p.join(imagesDir, '$noteId$extension');
-    final targetFile = File(targetPath);
-
-    if (widget.imageFile.path != targetPath) {
-      await widget.imageFile.copy(targetPath);
-    } else if (!(await targetFile.exists())) {
-      await widget.imageFile.copy(targetPath);
-    }
-
-    return targetPath;
-  }
 
 
   Future<void> _loadAvailableCategories() async {
-    final notesDirPath = await _getNotesDirectoryPath();
-    final notesDir = Directory(notesDirPath);
-
-    if (!(await notesDir.exists())) {
-      setState(() {
-        availableCategories = ['All'];
-      });
-      return;
-    }
-    final jsonFiles = notesDir
-        .listSync()
-        .where((f) => f.path.endsWith('.json'))
-        .cast<File>()
-        .toList();
-
     final categorySet = <String>{'All'};
-    for (var file in jsonFiles) {
-      try {
-        final content = await file.readAsString();
-        final json = jsonDecode(content);
-        final categories = (json['categories'] as List<dynamic>?)
-            ?.map((c) => c.toString())
-            .toList() ??
-            ['All'];
-        categorySet.addAll(categories);
-      } catch (_) {
-        // Ignore malformed files
-      }
+    final notesWithFiles = await _notesRepository.loadNotes();
+    for (var noteWithFile in notesWithFiles) {
+      categorySet.addAll(noteWithFile.note.categories);
     }
 
     if (widget.existingNote != null) {
@@ -151,63 +93,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       String oldCategory, {
         String? newCategory,
       }) async {
-    final notesDirPath = await _getNotesDirectoryPath();
-    final notesDir = Directory(notesDirPath);
-
-    if (!(await notesDir.exists())) return;
-
-    final jsonFiles = notesDir
-        .listSync()
-        .where((f) => f.path.endsWith('.json'))
-        .cast<File>()
-        .toList();
-
-    for (final file in jsonFiles) {
-      try {
-        final content = await file.readAsString();
-        final jsonMap = jsonDecode(content) as Map<String, dynamic>;
-        final note = Note.fromJson(jsonMap);
-
-        final updatedCategories = <String>[];
-        for (final category in note.categories) {
-          if (category == oldCategory) {
-            if (newCategory != null && newCategory.isNotEmpty) {
-              if (!updatedCategories.contains(newCategory)) {
-                updatedCategories.add(newCategory);
-              }
-            }
-            continue;
-          }
-          if (!updatedCategories.contains(category)) {
-            updatedCategories.add(category);
-          }
-        }
-
-        if (!updatedCategories.contains('All')) {
-          updatedCategories.add('All');
-        }
-
-        final oldSet = note.categories.toSet();
-        final newSet = updatedCategories.toSet();
-        final changed =
-            oldSet.length != newSet.length || !newSet.containsAll(oldSet);
-
-        if (!changed) continue;
-
-        final updatedNote = Note(
-          id: note.id,
-          title: note.title,
-          text: note.text,
-          imagePath: note.imagePath,
-          timestamp: note.timestamp,
-          categories: updatedCategories,
-        );
-
-        await file.writeAsString(jsonEncode(updatedNote.toJson()));
-      } catch (_) {
-        continue;
-      }
-    }
+    await _notesRepository.rewriteCategory(
+      old: oldCategory,
+      renamed: newCategory,
+    );
   }
 
   Future<void> _saveNoteWithCategories(List<String> categories) async {
@@ -215,7 +104,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final text = controller.text.trim();
 
     final noteId = widget.existingNote?.id ?? _generateNoteId();
-    final savedImagePath = await _saveImageToPermanentStorage(noteId);
+
 
     final uniqueCategories = {
       'All',
@@ -226,23 +115,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       title: title,
       id: noteId,
       text: text,
-      imagePath: savedImagePath,
+      imagePath: widget.imageFile.path,
       timestamp: DateTime.now(),
       categories: uniqueCategories,
     );
 
 
 
-    if (widget.noteFile != null) {
-      // Overwrite existing file
-      await widget.noteFile!.writeAsString(jsonEncode(note.toJson()));
-    } else {
-      // Save as new file
-      final path = await _getNotesDirectoryPath();
-      final fileName = 'note_$noteId.json';
-      final file = File('$path/$fileName');
-      await file.writeAsString(jsonEncode(note.toJson()));
-    }
+    await _notesRepository.saveNote(note, noteFile: widget.noteFile);
 
     if (!mounted) return;
     Navigator.pop(context); // Close editor
