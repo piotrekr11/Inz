@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'note_editor_screen.dart';
-import '../notes_model.dart';
+import '../models/note.dart';
 import '../data/notes_repository.dart';
 
 class SavedNotesScreen extends StatefulWidget {

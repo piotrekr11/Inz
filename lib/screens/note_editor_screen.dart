@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../data/notes_repository.dart';
-import '../notes_model.dart';
+import '../models/note.dart';
 import '/utils/ocr_helper.dart';
 
 class NoteEditorScreen extends StatefulWidget {
