@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../models/note.dart';
+import 'package:aplikacja_notatki/models/note.dart';
 
 typedef NoteShareCallback = void Function(Note note);
 

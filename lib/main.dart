@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '/screens/image_edit_screen.dart';
-import '/screens/saved_notes_screen.dart'; // Add this
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:aplikacja_notatki/screens/image_edit_screen.dart';
+import 'package:aplikacja_notatki/screens/saved_notes_screen.dart';
+import 'dart:io';
 
 
 void main() {

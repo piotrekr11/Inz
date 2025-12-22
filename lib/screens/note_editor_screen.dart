@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import '../state/notes_controller.dart';
-import '../widgets/category_picker_dialog.dart';
-import '../models/note.dart';
-import '/utils/ocr_helper.dart';
+import 'package:aplikacja_notatki/models/note.dart';
+import 'package:aplikacja_notatki/state/notes_controller.dart';
+import 'package:aplikacja_notatki/utils/ocr_helper.dart';
+import 'package:aplikacja_notatki/widgets/category_picker_dialog.dart';
 
 class NoteEditorScreen extends StatefulWidget {
   final File imageFile;

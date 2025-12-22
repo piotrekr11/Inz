@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'note_editor_screen.dart';
-import '../models/note.dart';
-import '../state/notes_controller.dart';
-import '../widgets/saved_note_tile.dart';
+import 'package:aplikacja_notatki/models/note.dart';
+import 'package:aplikacja_notatki/screens/note_editor_screen.dart';
+import 'package:aplikacja_notatki/state/notes_controller.dart';
+import 'package:aplikacja_notatki/widgets/saved_note_tile.dart';
 
 class SavedNotesScreen extends StatefulWidget {
   const SavedNotesScreen({Key? key}) : super(key: key);

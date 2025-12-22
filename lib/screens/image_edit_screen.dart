@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_editor/image_editor.dart';
 import 'package:path_provider/path_provider.dart';
-import 'edit_controls_screen.dart';
+import 'package:aplikacja_notatki/screens/edit_controls_screen.dart';
 
 
 class ImageEditScreen extends StatefulWidget {

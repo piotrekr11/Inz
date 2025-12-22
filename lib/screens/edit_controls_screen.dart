@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_editor/image_editor.dart';
 import 'package:path_provider/path_provider.dart';
-import 'note_editor_screen.dart';
+import 'package:aplikacja_notatki/screens/note_editor_screen.dart';
 
 
 class EditControlsScreen extends StatefulWidget {

@@ -1,9 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
-import '../data/notes_repository.dart';
-import '../models/note.dart';
+import 'package:aplikacja_notatki/data/notes_repository.dart';
+import 'package:aplikacja_notatki/models/note.dart';
 
 class NotesController extends ChangeNotifier {
   NotesController({
