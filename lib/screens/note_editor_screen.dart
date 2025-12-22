@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import '../data/notes_repository.dart';
+import '../state/notes_controller.dart';
 import '../widgets/category_picker_dialog.dart';
 import '../models/note.dart';
 import '/utils/ocr_helper.dart';
@@ -25,13 +25,13 @@ class NoteEditorScreen extends StatefulWidget {
 class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final TextEditingController controller = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
-  final NotesRepository _notesRepository = const NotesRepository();
-
-  List<String> availableCategories = ['All'];
-  List<String> selectedCategories = ['All'];
+  final NotesController _controller =
+  NotesController(treatAllAsExclusive: false);
 
   @override
   void dispose() {
+    _controller.removeListener(_handleControllerChanged);
+    _controller.dispose();
     controller.dispose();
     _titleController.dispose();
     super.dispose();
@@ -40,15 +40,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_handleControllerChanged);
 
     if (widget.existingNote != null) {
       _titleController.text = widget.existingNote!.title;
       controller.text = widget.existingNote!.text;
-      selectedCategories = [
+      _controller.setSelectedCategories([
         ...widget.existingNote!.categories,
         if (!widget.existingNote!.categories.contains('All')) 'All',
-      ];
+      ]);
     } else {
+      _controller.setSelectedCategories(['All']);
       performOCR();
 
     }
@@ -68,32 +70,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
 
   Future<void> _loadAvailableCategories() async {
-    final categorySet = <String>{'All'};
-    final notesWithFiles = await _notesRepository.loadNotes();
-    for (var noteWithFile in notesWithFiles) {
-      categorySet.addAll(noteWithFile.note.categories);
-    }
-
-    if (widget.existingNote != null) {
-      categorySet.addAll(widget.existingNote!.categories);
-    }
-
-    setState(() {
-      availableCategories = categorySet.toList()..sort();
-      if (!selectedCategories.contains('All')) {
-        selectedCategories = ['All', ...selectedCategories];
-      }
-    });
+    await _controller.loadAvailableCategories(existingNote: widget.existingNote);
   }
 
   Future<void> _rewriteCategoryInStoredNotes(
       String oldCategory, {
         String? newCategory,
       }) async {
-    await _notesRepository.rewriteCategory(
-      old: oldCategory,
-      renamed: newCategory,
-    );
+    await _controller.rewriteCategory(oldCategory, newCategory: newCategory);
   }
 
   Future<void> _saveNoteWithCategories(List<String> categories) async {
@@ -119,7 +103,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
 
 
-    await _notesRepository.saveNote(note, noteFile: widget.noteFile);
+    await _controller.saveNote(note, noteFile: widget.noteFile);
 
     if (!mounted) return;
     Navigator.pop(context); // Close editor
@@ -147,28 +131,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       context: context,
       builder: (context) {
         return CategoryPickerDialog(
-          availableCategories: availableCategories,
-          selectedCategories: selectedCategories,
+          availableCategories: _controller.availableCategories,
+          selectedCategories: _controller.selectedCategories,
           onAddCategory: (newCategory) {
             if (!mounted) return;
-            setState(() {
-              if (!availableCategories.contains(newCategory)) {
-                availableCategories.add(newCategory);
-                availableCategories.sort();
-              }
-            });
+            _controller.addAvailableCategory(newCategory);
           },
           onRenameCategory: (oldCategory, renamed) async {
             if (!mounted) return;
-            setState(() {
-              availableCategories.remove(oldCategory);
-              availableCategories.add(renamed);
-              availableCategories.sort();
-              if (selectedCategories.contains(oldCategory)) {
-                selectedCategories.remove(oldCategory);
-                selectedCategories.add(renamed);
-              }
-            });
+            _controller.renameCategory(oldCategory, renamed);
             await _rewriteCategoryInStoredNotes(
               oldCategory,
               newCategory: renamed,
@@ -176,20 +147,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           },
           onDeleteCategory: (category) async {
             if (!mounted) return;
-            setState(() {
-              availableCategories.remove(category);
-              selectedCategories.remove(category);
-            });
+            _controller.removeCategory(category);
             await _rewriteCategoryInStoredNotes(category);
           },
         );
       },
     );
     if (!mounted || result == null) return;
-    setState(() {
-      selectedCategories = result;
-    });
-    await _saveNoteWithCategories(selectedCategories);
+    _controller.setSelectedCategories(result);
+    await _saveNoteWithCategories(result);
   }
 
   Future<void> shareNote() async {
@@ -197,6 +163,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     if (text.isEmpty) return;
     await Share.share(text);
   }
+
+  void _handleControllerChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -257,3 +229,5 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   }
 }
+
+

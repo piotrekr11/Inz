@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'note_editor_screen.dart';
 import '../models/note.dart';
-import '../data/notes_repository.dart';
+import '../state/notes_controller.dart';
 import '../widgets/saved_note_tile.dart';
 
 class SavedNotesScreen extends StatefulWidget {
@@ -14,35 +14,32 @@ class SavedNotesScreen extends StatefulWidget {
 }
 
 class SavedNotesScreenState extends State<SavedNotesScreen> {
-  List<Note> notes = [];
-  List<File> files = [];
-  List<String> availableCategories = ['All'];
-  List<String> selectedCategories = ['All'];
-  final NotesRepository _notesRepository = const NotesRepository();
+  late final NotesController _controller;
 
   @override
   void initState() {
     super.initState();
-    loadNotes();
+    _controller = NotesController();
+    _controller.addListener(_handleControllerChanged);
+    _controller.loadNotes();
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_handleControllerChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleControllerChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> loadNotes() async {
-    final paired = await _notesRepository.loadNotes();
-    setState(() {
-      notes = paired.map((pair) => pair.note).toList();
-      files = paired.map((pair) => pair.file).toList();
-    });
-    _updateAvailableCategories();
+    await _controller.loadNotes();
   }
 
-  void deleteNote(int index) async {
-    await _notesRepository.deleteNote(notes[index], files[index]);
-    setState(() {
-      notes.removeAt(index);
-      files.removeAt(index);
-    });
-    _updateAvailableCategories();
-  }
 
   Future<void> _shareNote(Note note) async {
     final text = note.text.trim();
@@ -67,7 +64,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                deleteNote(index);
+                _controller.deleteNoteAt(index);
               },
               child: const Text('Usuń'),
             ),
@@ -87,32 +84,11 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
           noteFile: file,
         ),
       ),
-    ).then((_) => loadNotes()); // Reload list after edits
-  }
-  void _updateAvailableCategories() {
-    final categorySet = <String>{'All'};
-    for (final note in notes) {
-      categorySet.addAll(note.categories);
-    }
-    setState(() {
-      availableCategories = categorySet.toList()..sort();
-      if (selectedCategories.isEmpty) {
-        selectedCategories = ['All'];
-      } else if (selectedCategories.contains('All')) {
-        selectedCategories = ['All'];
-      } else {
-        selectedCategories = selectedCategories
-            .where((c) => categorySet.contains(c))
-            .toList();
-        if (selectedCategories.isEmpty) {
-          selectedCategories = ['All'];
-        }
-      }
-    });
+    ).then((_) => _controller.loadNotes()); // Reload list after edit
   }
 
   void _openFilterDialog() {
-    final tempSelected = [...selectedCategories];
+    final tempSelected = [..._controller.selectedCategories];
 
     showDialog(
       context: context,
@@ -125,7 +101,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ...availableCategories.map((category) {
+                    ..._controller.availableCategories.map((category) {
                       return CheckboxListTile(
                         title: Text(category),
                         value: tempSelected.contains(category),
@@ -162,9 +138,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    setState(() {
-                      selectedCategories = tempSelected;
-                    });
+                    _controller.setSelectedCategories(tempSelected);
                     Navigator.pop(context);
                   },
                   child: const Text('Zastosuj'),
@@ -178,16 +152,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
   }
 
   List<Note> _filteredNotes() {
-    if (selectedCategories.contains('All')) {
-      return notes;
-    }
-
-    return notes
-        .where(
-          (note) => note.categories
-          .any((category) => selectedCategories.contains(category)),
-    )
-        .toList();
+    return _controller.filteredNotes;
   }
 
 
@@ -207,7 +172,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
           )
         ],
       ),
-      body: notes.isEmpty
+      body: _controller.notes.isEmpty
           ? const Center(child: Text('Brak zapisanych notatek.'))
           : Column(
         children: [
@@ -218,7 +183,7 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
               child: Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                children: selectedCategories
+                children: _controller.selectedCategories
                     .map((c) => Chip(
                   label: Text(c),
                 ))
@@ -235,13 +200,13 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
               itemCount: filteredNotes.length,
               itemBuilder: (context, index) {
                 final note = filteredNotes[index];
-                final fileIndex = notes.indexOf(note);
+                final fileIndex = _controller.notes.indexOf(note);;
                 return SavedNoteTile(
                   note: note,
-                  onEdit: (note) => openNote(note, files[fileIndex]),
+                  onEdit: (note) => openNote(note, _controller.files[fileIndex]),
                   onShare: _shareNote,
                   onDelete: () => _confirmDelete(fileIndex),
-                  onTap: () => openNote(note, files[fileIndex]),
+                  onTap: () => openNote(note, _controller.files[fileIndex]),
                 );
               },
             ),
