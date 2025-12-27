@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -79,7 +79,10 @@ class NotesRepository {
         final json = jsonDecode(content);
         loadedNotes.add(Note.fromJson(json));
         loadedFiles.add(file);
-      } catch (_) {
+      } catch (error) {
+        debugPrint(
+          'lib/data/notes_repository.dart loadNotes failed for ${file.path}: $error',
+        );
         // Skip malformed files instead of breaking the whole list.
         continue;
       }
@@ -191,7 +194,10 @@ class NotesRepository {
         );
 
         await file.writeAsString(jsonEncode(updatedNote.toJson()));
-      } catch (_) {
+      } catch (error) {
+        debugPrint(
+          'lib/data/notes_repository.dart rewriteCategory failed for ${file.path}: $error',
+        );
         continue;
       }
     }
