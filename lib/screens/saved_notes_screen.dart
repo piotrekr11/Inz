@@ -41,7 +41,6 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
     await _controller.loadNotes();
   }
 
-
   Future<void> _shareNote(Note note) async {
     final text = note.text.trim();
     if (text.isEmpty) return;
@@ -156,9 +155,6 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
     return _controller.filteredNotes;
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
     final filteredNotes = _filteredNotes();
@@ -174,7 +170,11 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
         ],
       ),
       body: _controller.notes.isEmpty
-          ? const Center(child: Text('Brak zapisanych notatek.'))
+          ? _EmptyState(
+        title: 'Brak zapisanych notatek',
+        subtitle: 'Twoje notatki pojawią się tutaj po zapisaniu.',
+        icon: Icons.note_add_outlined,
+      )
           : Column(
         children: [
           Padding(
@@ -194,14 +194,18 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
           ),
           Expanded(
             child: filteredNotes.isEmpty
-                ? const Center(
-              child: Text('Brak notatek w wybranych kategoriach.'),
+                ? const _EmptyState(
+              title: 'Brak notatek w wybranych kategoriach',
+              subtitle: 'Zmień filtr lub dodaj nowe notatki.',
+              icon: Icons.filter_alt_off,
             )
-                : ListView.builder(
+                : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               itemCount: filteredNotes.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final note = filteredNotes[index];
-                final fileIndex = _controller.notes.indexOf(note);;
+                final fileIndex = _controller.notes.indexOf(note);
                 return SavedNoteTile(
                   note: note,
                   onEdit: (note) => openNote(note, _controller.files[fileIndex]),
@@ -214,6 +218,49 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
           ),
         ],
 
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 56, color: colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
