@@ -6,6 +6,7 @@ import 'package:aplikacja_notatki/constants/category_constants.dart';
 import 'package:aplikacja_notatki/state/notes_controller.dart';
 import 'package:aplikacja_notatki/utils/ocr_helper.dart';
 import 'package:aplikacja_notatki/widgets/category_picker_dialog.dart';
+import 'package:aplikacja_notatki/screens/fullscreen_image_screen.dart';
 
 class NoteEditorScreen extends StatefulWidget {
   final File imageFile;
@@ -108,7 +109,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     await _controller.saveNote(note, noteFile: widget.noteFile);
 
     if (!mounted) return;
-    Navigator.pop(context); // Close editor
+    Navigator.pop(context, true); // Close editor
   }
 
   Future<void> _handleSavePressed() async {
@@ -196,7 +197,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
             AspectRatio(
               aspectRatio: 4 / 3,
-              child: Image.file(widget.imageFile, fit: BoxFit.contain),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FullscreenImageScreen(
+                        imageFile: widget.imageFile,
+                      ),
+                    ),
+                  );
+                },
+                child: Image.file(widget.imageFile, fit: BoxFit.contain),
+              ),
             ),
             const SizedBox(height: 12),
             ConstrainedBox(
