@@ -1,3 +1,5 @@
+import 'package:aplikacja_notatki/constants/category_constants.dart';
+
 class Note {
   final String title;
   final String id;
@@ -42,7 +44,7 @@ class Note {
           .toList()
           .toSet()
           .toList() ??
-          ['All'],
+          [defaultCategory],
     );
   }
 }

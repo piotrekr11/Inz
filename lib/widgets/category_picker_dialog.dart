@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:aplikacja_notatki/constants/category_constants.dart';
 
 class CategoryPickerDialog extends StatefulWidget {
   final List<String> availableCategories;
@@ -125,7 +126,7 @@ class _CategoryPickerDialogState extends State<CategoryPickerDialog> {
     if (newCategory.isEmpty) return;
 
     final customCount =
-        _availableCategories.where((c) => c != 'All').length;
+        _availableCategories.where((c) => c != defaultCategory).length;
     final alreadyExists = _availableCategories.contains(newCategory);
 
     if (!alreadyExists && customCount >= 10) {
@@ -162,7 +163,7 @@ class _CategoryPickerDialogState extends State<CategoryPickerDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ..._availableCategories.map((category) {
-              final isAll = category == 'All';
+              final isAll = category == defaultCategory;
               return CheckboxListTile(
                 title: Text(category),
                 value: _tempSelected.contains(category),

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:aplikacja_notatki/models/note.dart';
+import 'package:aplikacja_notatki/constants/category_constants.dart';
 import 'package:aplikacja_notatki/screens/note_editor_screen.dart';
 import 'package:aplikacja_notatki/state/notes_controller.dart';
 import 'package:aplikacja_notatki/widgets/saved_note_tile.dart';
@@ -107,20 +108,20 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
                         value: tempSelected.contains(category),
                         onChanged: (value) {
                           setStateDialog(() {
-                            if (category == 'All') {
+                            if (category == defaultCategory) {
                               if (value == true) {
                                 tempSelected
                                   ..clear()
-                                  ..add('All');
+                                  ..add(defaultCategory);
                               }
                             } else {
                               if (value == true) {
                                 tempSelected.add(category);
-                                tempSelected.remove('All');
+                                tempSelected.remove(defaultCategory);
                               } else {
                                 tempSelected.remove(category);
                                 if (tempSelected.isEmpty) {
-                                  tempSelected.add('All');
+                                  tempSelected.add(defaultCategory);
                                 }
                               }
                             }

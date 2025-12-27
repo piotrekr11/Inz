@@ -1,5 +1,5 @@
 import 'dart:io';
-
+import 'package:aplikacja_notatki/constants/category_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:aplikacja_notatki/data/notes_repository.dart';
 import 'package:aplikacja_notatki/models/note.dart';
@@ -16,8 +16,8 @@ class NotesController extends ChangeNotifier {
 
   List<Note> _notes = [];
   List<File> _files = [];
-  List<String> _availableCategories = ['All'];
-  List<String> _selectedCategories = ['All'];
+  List<String> _availableCategories = [defaultCategory];
+  List<String> _selectedCategories = [defaultCategory];
 
   List<Note> get notes => List.unmodifiable(_notes);
   List<File> get files => List.unmodifiable(_files);
@@ -25,7 +25,7 @@ class NotesController extends ChangeNotifier {
   List<String> get selectedCategories => List.unmodifiable(_selectedCategories);
 
   List<Note> get filteredNotes {
-    if (_selectedCategories.contains('All')) {
+    if (_selectedCategories.contains(defaultCategory)) {
       return _notes;
     }
     return _notes
@@ -53,7 +53,7 @@ class NotesController extends ChangeNotifier {
   }
 
   Future<void> loadAvailableCategories({Note? existingNote}) async {
-    final categorySet = <String>{'All'};
+    final categorySet = <String>{defaultCategory};
     final notesWithFiles = await _notesRepository.loadNotes();
     for (final noteWithFile in notesWithFiles) {
       categorySet.addAll(noteWithFile.note.categories);
@@ -64,8 +64,8 @@ class NotesController extends ChangeNotifier {
     }
 
     _availableCategories = categorySet.toList()..sort();
-    if (!_selectedCategories.contains('All')) {
-      _selectedCategories = ['All', ..._selectedCategories];
+    if (!_selectedCategories.contains(defaultCategory)) {
+      _selectedCategories = [defaultCategory, ..._selectedCategories];
     }
     notifyListeners();
   }
@@ -115,7 +115,7 @@ class NotesController extends ChangeNotifier {
   }
 
   void _updateAvailableCategories() {
-    final categorySet = <String>{'All'};
+    final categorySet = <String>{defaultCategory};
     for (final note in _notes) {
       categorySet.addAll(note.categories);
     }
@@ -125,16 +125,16 @@ class NotesController extends ChangeNotifier {
 
   List<String> _normalizeSelected(List<String> categories) {
     if (categories.isEmpty) {
-      return ['All'];
+      return [defaultCategory];
     }
-    if (_treatAllAsExclusive && categories.contains('All')) {
-      return ['All'];
+    if (_treatAllAsExclusive && categories.contains(defaultCategory)) {
+      return [defaultCategory];
     }
     if (!_treatAllAsExclusive) {
       return categories;
     }
     final available = _availableCategories.toSet();
     final filtered = categories.where(available.contains).toList();
-    return filtered.isEmpty ? ['All'] : filtered;
+    return filtered.isEmpty ? [defaultCategory] : filtered;
   }
 }

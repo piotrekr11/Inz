@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:aplikacja_notatki/models/note.dart';
+import 'package:aplikacja_notatki/constants/category_constants.dart';
 import 'package:aplikacja_notatki/state/notes_controller.dart';
 import 'package:aplikacja_notatki/utils/ocr_helper.dart';
 import 'package:aplikacja_notatki/widgets/category_picker_dialog.dart';
@@ -47,10 +48,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       controller.text = widget.existingNote!.text;
       _controller.setSelectedCategories([
         ...widget.existingNote!.categories,
-        if (!widget.existingNote!.categories.contains('All')) 'All',
+        if (!widget.existingNote!.categories.contains(defaultCategory))
+          defaultCategory,
       ]);
     } else {
-      _controller.setSelectedCategories(['All']);
+      _controller.setSelectedCategories([defaultCategory]);
       performOCR();
 
     }
@@ -88,7 +90,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
 
     final uniqueCategories = {
-      'All',
+      defaultCategory,
       ...categories.where((c) => c.trim().isNotEmpty).map((c) => c.trim()),
     }.toList();
 
