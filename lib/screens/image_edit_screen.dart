@@ -17,15 +17,14 @@ class ImageEditScreen extends StatefulWidget {
 
 class _ImageEditScreenState extends State<ImageEditScreen> {
   final GlobalKey imageKey = GlobalKey();
+  final _SelectionDragHelper _dragHelper = _SelectionDragHelper();
   late File originalFile;
   int imageWidth = 0;
   int imageHeight = 0;
 
   Rect selectionRect = Rect.zero;
   bool selectionInitialized = false;
-  bool isDragging = false;
-  Offset? dragStart;
-  String dragEdge = '';
+
 
   Size displaySize = Size.zero;
   Offset imageOffset = Offset.zero;
@@ -85,61 +84,26 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
   }
 
   void _onPanStart(DragStartDetails details, String edge) {
-    dragStart = details.localPosition;
-    dragEdge = edge;
-    isDragging = true;
+    _dragHelper.onPanStart(details, edge);
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    if (!isDragging || dragStart == null) return;
-    final delta = details.localPosition - dragStart!;
-    Rect newRect = selectionRect;
+    final newRect = _dragHelper.onPanUpdate(
+      details: details,
+      selectionRect: selectionRect,
+      imageOffset: imageOffset,
+      displaySize: displaySize,
+    );
 
-    switch (dragEdge) {
-      case 'left':
-        newRect = Rect.fromLTRB(
-          (selectionRect.left + delta.dx).clamp(imageOffset.dx, selectionRect.right - 20),
-          selectionRect.top,
-          selectionRect.right,
-          selectionRect.bottom,
-        );
-        break;
-      case 'right':
-        newRect = Rect.fromLTRB(
-          selectionRect.left,
-          selectionRect.top,
-          (selectionRect.right + delta.dx).clamp(selectionRect.left + 20, imageOffset.dx + displaySize.width),
-          selectionRect.bottom,
-        );
-        break;
-      case 'top':
-        newRect = Rect.fromLTRB(
-          selectionRect.left,
-          (selectionRect.top + delta.dy).clamp(imageOffset.dy, selectionRect.bottom - 20),
-          selectionRect.right,
-          selectionRect.bottom,
-        );
-        break;
-      case 'bottom':
-        newRect = Rect.fromLTRB(
-          selectionRect.left,
-          selectionRect.top,
-          selectionRect.right,
-          (selectionRect.bottom + delta.dy).clamp(selectionRect.top + 20, imageOffset.dy + displaySize.height),
-        );
-        break;
+    if (newRect != selectionRect) {
+      setState(() {
+        selectionRect = newRect;
+      });
     }
-
-    setState(() {
-      selectionRect = newRect;
-      dragStart = details.localPosition;
-    });
   }
 
   void _onPanEnd(DragEndDetails details) {
-    isDragging = false;
-    dragStart = null;
-    dragEdge = '';
+    _dragHelper.onPanEnd(details);
   }
 
   Future<File> cropSelectedArea() async {
@@ -181,40 +145,7 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
     }
   }
 
-  Widget _buildEdgeHandle(String edge) {
-    Rect edgeRect;
-    switch (edge) {
-      case 'left':
-        edgeRect = Rect.fromLTWH(selectionRect.left - 10, selectionRect.top, 20, selectionRect.height);
-        break;
-      case 'right':
-        edgeRect = Rect.fromLTWH(selectionRect.right - 10, selectionRect.top, 20, selectionRect.height);
-        break;
-      case 'top':
-        edgeRect = Rect.fromLTWH(selectionRect.left, selectionRect.top - 10, selectionRect.width, 20);
-        break;
-      case 'bottom':
-        edgeRect = Rect.fromLTWH(selectionRect.left, selectionRect.bottom - 10, selectionRect.width, 20);
-        break;
-      default:
-        edgeRect = Rect.zero;
-    }
 
-    return Positioned(
-      left: edgeRect.left,
-      top: edgeRect.top,
-      width: edgeRect.width,
-      height: edgeRect.height,
-      child: GestureDetector(
-        onPanStart: (details) => _onPanStart(details, edge),
-        onPanUpdate: _onPanUpdate,
-        onPanEnd: _onPanEnd,
-        child: Container(
-          color: Colors.transparent,
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -241,16 +172,12 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
                         fit: BoxFit.contain,
                       ),
                     ),
-                    Positioned.fromRect(
-                      rect: selectionRect,
-                      child: CustomPaint(
-                        painter: _SelectionBorderPainter(),
-                      ),
+                    _SelectionOverlay(
+                      selectionRect: selectionRect,
+                      onPanStart: _onPanStart,
+                      onPanUpdate: _onPanUpdate,
+                      onPanEnd: _onPanEnd,
                     ),
-                    _buildEdgeHandle('left'),
-                    _buildEdgeHandle('right'),
-                    _buildEdgeHandle('top'),
-                    _buildEdgeHandle('bottom'),
                   ],
                 ),
               ),
@@ -267,6 +194,141 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
     );
   }
 }
+
+class _SelectionOverlay extends StatelessWidget {
+  const _SelectionOverlay({
+    required this.selectionRect,
+    required this.onPanStart,
+    required this.onPanUpdate,
+    required this.onPanEnd,
+  });
+
+  final Rect selectionRect;
+  final void Function(DragStartDetails details, String edge) onPanStart;
+  final void Function(DragUpdateDetails details) onPanUpdate;
+  final void Function(DragEndDetails details) onPanEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fromRect(
+          rect: selectionRect,
+          child: CustomPaint(
+            painter: _SelectionBorderPainter(),
+          ),
+        ),
+        _buildEdgeHandle('left'),
+        _buildEdgeHandle('right'),
+        _buildEdgeHandle('top'),
+        _buildEdgeHandle('bottom'),
+      ],
+    );
+  }
+
+  Widget _buildEdgeHandle(String edge) {
+    Rect edgeRect;
+    switch (edge) {
+      case 'left':
+        edgeRect = Rect.fromLTWH(selectionRect.left - 10, selectionRect.top, 20, selectionRect.height);
+        break;
+      case 'right':
+        edgeRect = Rect.fromLTWH(selectionRect.right - 10, selectionRect.top, 20, selectionRect.height);
+        break;
+      case 'top':
+        edgeRect = Rect.fromLTWH(selectionRect.left, selectionRect.top - 10, selectionRect.width, 20);
+        break;
+      case 'bottom':
+        edgeRect = Rect.fromLTWH(selectionRect.left, selectionRect.bottom - 10, selectionRect.width, 20);
+        break;
+      default:
+        edgeRect = Rect.zero;
+    }
+
+    return Positioned(
+      left: edgeRect.left,
+      top: edgeRect.top,
+      width: edgeRect.width,
+      height: edgeRect.height,
+      child: GestureDetector(
+        onPanStart: (details) => onPanStart(details, edge),
+        onPanUpdate: onPanUpdate,
+        onPanEnd: onPanEnd,
+        child: Container(
+          color: Colors.transparent,
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectionDragHelper {
+  bool isDragging = false;
+  Offset? dragStart;
+  String dragEdge = '';
+
+  void onPanStart(DragStartDetails details, String edge) {
+    dragStart = details.localPosition;
+    dragEdge = edge;
+    isDragging = true;
+  }
+
+  Rect onPanUpdate({
+    required DragUpdateDetails details,
+    required Rect selectionRect,
+    required Offset imageOffset,
+    required Size displaySize,
+  }) {
+    if (!isDragging || dragStart == null) return selectionRect;
+    final delta = details.localPosition - dragStart!;
+    Rect newRect = selectionRect;
+
+    switch (dragEdge) {
+      case 'left':
+        newRect = Rect.fromLTRB(
+          (selectionRect.left + delta.dx).clamp(imageOffset.dx, selectionRect.right - 20),
+          selectionRect.top,
+          selectionRect.right,
+          selectionRect.bottom,
+        );
+        break;
+      case 'right':
+        newRect = Rect.fromLTRB(
+          selectionRect.left,
+          selectionRect.top,
+          (selectionRect.right + delta.dx).clamp(selectionRect.left + 20, imageOffset.dx + displaySize.width),
+          selectionRect.bottom,
+        );
+        break;
+      case 'top':
+        newRect = Rect.fromLTRB(
+          selectionRect.left,
+          (selectionRect.top + delta.dy).clamp(imageOffset.dy, selectionRect.bottom - 20),
+          selectionRect.right,
+          selectionRect.bottom,
+        );
+        break;
+      case 'bottom':
+        newRect = Rect.fromLTRB(
+          selectionRect.left,
+          selectionRect.top,
+          selectionRect.right,
+          (selectionRect.bottom + delta.dy).clamp(selectionRect.top + 20, imageOffset.dy + displaySize.height),
+        );
+        break;
+    }
+
+    dragStart = details.localPosition;
+    return newRect;
+  }
+
+  void onPanEnd(DragEndDetails details) {
+    isDragging = false;
+    dragStart = null;
+    dragEdge = '';
+  }
+}
+
 class _SelectionBorderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

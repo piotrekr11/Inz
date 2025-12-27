@@ -14,6 +14,58 @@ class EditControlsScreen extends StatefulWidget {
   State<EditControlsScreen> createState() => _EditControlsScreenState();
 }
 
+class _EditSlider extends StatelessWidget {
+  const _EditSlider({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.step,
+    required this.onChanged,
+    this.description,
+    this.onChangeEnd,
+  });
+
+  final String label;
+  final String? description;
+  final double value;
+  final double min;
+  final double max;
+  final double step;
+  final void Function(double) onChanged;
+  final void Function(double)? onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('$label: ${value.toStringAsFixed(2)}'),
+        if (description != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4.0),
+            child: Text(
+              description!,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey[700]),
+            ),
+          ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: ((max - min) / step).round(),
+          label: value.toStringAsFixed(2),
+          onChanged: onChanged,
+          onChangeEnd: onChangeEnd,
+        ),
+      ],
+    );
+  }
+}
+
 class _EditControlsScreenState extends State<EditControlsScreen> {
   late File originalFile;
   File? previewFile;
@@ -103,43 +155,8 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
     }
   }
 
-  Widget buildSlider({
-    required String label,
-    required double value,
-    required double min,
-    required double max,
-    required double step,
-    String? description,
-    required void Function(double) onChanged,
-    void Function(double)? onChangeEnd,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('$label: ${value.toStringAsFixed(2)}'),
-        if (description != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4.0),
-            child: Text(
-              description,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey[700]),
-            ),
-          ),
-        Slider(
-          value: value,
-          min: min,
-          max: max,
-          divisions: ((max - min) / step).round(),
-          label: value.toStringAsFixed(2),
-          onChanged: onChanged,
-          onChangeEnd: onChangeEnd,
-        ),
-      ],
-    );
-  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +176,7 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            buildSlider(
+            _EditSlider(
               label: 'Obrót',
               value: rotation,
               min: 0,
@@ -168,7 +185,7 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
               onChanged: (val) => setState(() => rotation = val),
               onChangeEnd: (_) => updatePreview(),
             ),
-            buildSlider(
+            _EditSlider(
               label: 'Jasność',
               description:
               '0 = czarne zdjęcie, 1 = oryginalna jasność, 2 = maksymalnie rozjaśnione',
@@ -179,7 +196,7 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
               onChanged: (val) => setState(() => brightness = val),
               onChangeEnd: (_) => updatePreview(),
             ),
-            buildSlider(
+            _EditSlider(
               label: 'Kontrast',
               description:
               '0.7 = łagodny kontrast, 1 = oryginał, 1.3 = mocno podkreślony',
