@@ -125,9 +125,12 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
 
     final tempDir = await getTemporaryDirectory();
     final file = File(
-      '${tempDir.path}/selected_crop_${DateTime.now().millisecondsSinceEpoch}.png',
+      '${tempDir.path}/selected_crop_${DateTime.now().millisecondsSinceEpoch}.jpg',
     );
-    return file.writeAsBytes(result!);
+    final decoded = result != null ? img.decodeImage(result) : null;
+    final jpgBytes =
+    decoded != null ? img.encodeJpg(decoded, quality: 90) : result;
+    return file.writeAsBytes(jpgBytes!);
   }
 
   void onContinue() async {

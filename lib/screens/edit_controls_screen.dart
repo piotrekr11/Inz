@@ -69,6 +69,7 @@ class _EditSlider extends StatelessWidget {
 class _EditControlsScreenState extends State<EditControlsScreen> {
   late File originalFile;
   File? previewFile;
+  File? _lastPreviewFile;
 
   double rotation = 0;
   double brightness = 1.0;
@@ -80,6 +81,12 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
     originalFile = widget.imageFile;
     previewFile = originalFile;
     updatePreview();
+  }
+
+  @override
+  void dispose() {
+    _cleanupTempFile(_lastPreviewFile);
+    super.dispose();
   }
 
   Future<void> updatePreview() async {
@@ -106,10 +113,23 @@ class _EditControlsScreenState extends State<EditControlsScreen> {
     final tempDir = await getTemporaryDirectory();
     final tempFile = File('${tempDir.path}/preview_${DateTime.now().millisecondsSinceEpoch}.jpg');
     await tempFile.writeAsBytes(result!);
-
+    final previousPreview = _lastPreviewFile;
     setState(() {
+      _lastPreviewFile = tempFile;
       previewFile = tempFile;
     });
+    _cleanupTempFile(previousPreview);
+  }
+
+  void _cleanupTempFile(File? file) {
+    if (file == null) return;
+    if (file.path == originalFile.path) return;
+    if (file.path == previewFile?.path) return;
+    if (file.existsSync()) {
+      try {
+        file.deleteSync();
+      } catch (_) {}
+    }
   }
 
   void resetEdits() {
