@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:aplikacja_notatki/screens/image_edit_screen.dart';
+import 'package:aplikacja_notatki/screens/image_crop_screen.dart';
 import 'package:aplikacja_notatki/screens/saved_notes_screen.dart';
 import 'dart:io';
 
@@ -68,7 +68,7 @@ class _HomeNavigationState extends State<HomeNavigation> {
       final file = File(pickedFile.path);
       final saved = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ImageEditScreen(imageFile: file)),
+        MaterialPageRoute(builder: (_) => ImageCropScreen(imageFile: file)),
       );
 
       if (saved == true) {

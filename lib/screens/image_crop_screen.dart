@@ -1,21 +1,21 @@
-// ImageEditScreen with constrained cropping and accurate selection
+// ImageCropScreen with constrained cropping and accurate selection
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_editor/image_editor.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:aplikacja_notatki/screens/edit_controls_screen.dart';
+import 'package:aplikacja_notatki/screens/image_adjustment_screen.dart';
 
 
-class ImageEditScreen extends StatefulWidget {
+class ImageCropScreen extends StatefulWidget {
   final File imageFile;
-  const ImageEditScreen({required this.imageFile, Key? key}) : super(key: key);
+  const ImageCropScreen({required this.imageFile, Key? key}) : super(key: key);
 
   @override
-  State<ImageEditScreen> createState() => _ImageEditScreenState();
+  State<ImageCropScreen> createState() => _ImageCropScreenState();
 }
 
-class _ImageEditScreenState extends State<ImageEditScreen> {
+class _ImageCropScreenState extends State<ImageCropScreen> {
   final GlobalKey imageKey = GlobalKey();
   final _SelectionDragHelper _dragHelper = _SelectionDragHelper();
   late File originalFile;
@@ -139,7 +139,7 @@ class _ImageEditScreenState extends State<ImageEditScreen> {
       final saved = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => EditControlsScreen(imageFile: cropped),
+          builder: (_) => ImageAdjustmentScreen(imageFile: cropped),
         ),
       );
       if (saved == true && mounted) {

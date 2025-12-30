@@ -5,13 +5,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:aplikacja_notatki/screens/note_editor_screen.dart';
 
 
-class EditControlsScreen extends StatefulWidget {
+class ImageAdjustmentScreen extends StatefulWidget {
   final File imageFile;
 
-  const EditControlsScreen({required this.imageFile, Key? key}) : super(key: key);
+  const ImageAdjustmentScreen({required this.imageFile, Key? key}) : super(key: key);
 
   @override
-  State<EditControlsScreen> createState() => _EditControlsScreenState();
+  State<ImageAdjustmentScreen> createState() => _ImageAdjustmentScreenState();
 }
 
 class _EditSlider extends StatelessWidget {
@@ -66,7 +66,7 @@ class _EditSlider extends StatelessWidget {
   }
 }
 
-class _EditControlsScreenState extends State<EditControlsScreen> {
+class _ImageAdjustmentScreenState extends State<ImageAdjustmentScreen> {
   late File originalFile;
   File? previewFile;
   File? _lastPreviewFile;
