@@ -24,6 +24,7 @@ class _EditSlider extends StatelessWidget {
     required this.onChanged,
     this.description,
     this.onChangeEnd,
+    this.valueFormatter,
   });
 
   final String label;
@@ -34,13 +35,16 @@ class _EditSlider extends StatelessWidget {
   final double step;
   final void Function(double) onChanged;
   final void Function(double)? onChangeEnd;
+  final String Function(double)? valueFormatter;
 
   @override
   Widget build(BuildContext context) {
+    final formatter =
+        valueFormatter ?? (value) => value.toStringAsFixed(2);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('$label: ${value.toStringAsFixed(2)}'),
+        Text('$label: ${formatter(value)}'),
         if (description != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 4.0),
@@ -57,7 +61,7 @@ class _EditSlider extends StatelessWidget {
           min: min,
           max: max,
           divisions: ((max - min) / step).round(),
-          label: value.toStringAsFixed(2),
+          label: formatter(value),
           onChanged: onChanged,
           onChangeEnd: onChangeEnd,
         ),
@@ -72,9 +76,17 @@ class _ImageAdjustmentScreenState extends State<ImageAdjustmentScreen> {
   File? _lastPreviewFile;
 
   double rotation = 0;
-  double brightness = 1.0;
-  double contrast = 1.0;
+  double brightnessPercent = 0;
+  double contrastPercent = 0;
 
+  double get _brightnessValue =>
+      (1 + (brightnessPercent / 100)).clamp(0.0, 2.0);
+  double get _contrastValue {
+    final normalized = contrastPercent / 100;
+    final contrastValue =
+      normalized < 0 ? 1 + normalized : 1 + normalized;
+    return contrastValue.clamp(0.0, 2.0);
+  }
   @override
   void initState() {
     super.initState();
@@ -91,7 +103,7 @@ class _ImageAdjustmentScreenState extends State<ImageAdjustmentScreen> {
 
   Future<void> updatePreview() async {
     final needsProcessing =
-        rotation != 0 || brightness != 1.0 || contrast != 1.0;
+        rotation != 0 || brightnessPercent != 0 || contrastPercent != 0;
 
     if (!needsProcessing) {
       setState(() {
@@ -102,8 +114,8 @@ class _ImageAdjustmentScreenState extends State<ImageAdjustmentScreen> {
     final editorOption = ImageEditorOption()
 
       ..addOption(RotateOption(rotation.toInt()))
-      ..addOption(ColorOption.brightness(brightness))
-      ..addOption(ColorOption.contrast(contrast));
+      ..addOption(ColorOption.brightness(_brightnessValue))
+      ..addOption(ColorOption.contrast(_contrastValue));
 
     final result = await ImageEditor.editImage(
       image: await originalFile.readAsBytes(),
@@ -135,15 +147,15 @@ class _ImageAdjustmentScreenState extends State<ImageAdjustmentScreen> {
   void resetEdits() {
     setState(() {
       rotation = 0;
-      brightness = 1.0;
-      contrast = 1.0;
+      brightnessPercent = 0;
+      contrastPercent = 0;
     });
     updatePreview();
   }
 
   void continueToOCR() async {
     final needsProcessing =
-        rotation != 0 || brightness != 1.0 || contrast != 1.0;
+        rotation != 0 || brightnessPercent != 0 || contrastPercent != 0;
 
     File finalEditedFile = originalFile;
 
@@ -152,8 +164,8 @@ class _ImageAdjustmentScreenState extends State<ImageAdjustmentScreen> {
         image: await originalFile.readAsBytes(),
         imageEditorOption: ImageEditorOption()
           ..addOption(RotateOption(rotation.toInt()))
-          ..addOption(ColorOption.brightness(brightness))
-          ..addOption(ColorOption.contrast(contrast)),
+          ..addOption(ColorOption.brightness(_brightnessValue))
+          ..addOption(ColorOption.contrast(_contrastValue)),
       );
 
       final tempDir = await getTemporaryDirectory();
@@ -202,29 +214,32 @@ class _ImageAdjustmentScreenState extends State<ImageAdjustmentScreen> {
               min: 0,
               max: 360,
               step: 1,
+              valueFormatter: (value) => value.toStringAsFixed(0),
               onChanged: (val) => setState(() => rotation = val),
               onChangeEnd: (_) => updatePreview(),
             ),
             _EditSlider(
               label: 'Jasność',
               description:
-              '0 = czarne zdjęcie, 1 = oryginalna jasność, 2 = maksymalnie rozjaśnione',
-              value: brightness,
-              min: 0.0,
-              max: 2.0,
-              step: 0.01,
-              onChanged: (val) => setState(() => brightness = val),
+              '-100% = czarne zdjęcie, 0% = oryginalna jasność, +100% = maksymalnie rozjaśnione',
+              value: brightnessPercent,
+              min: -100,
+              max: 100,
+              step: 1,
+              valueFormatter: (value) => '${value.toStringAsFixed(0)}%',
+              onChanged: (val) => setState(() => brightnessPercent = val),
               onChangeEnd: (_) => updatePreview(),
             ),
             _EditSlider(
               label: 'Kontrast',
               description:
-              '0.7 = łagodny kontrast, 1 = oryginał, 1.3 = mocno podkreślony',
-              value: contrast,
-              min: 0.7,
-              max: 1.3,
-              step: 0.01,
-              onChanged: (val) => setState(() => contrast = val),
+              '-100% = minimalny kontrast, 0% = oryginał, +100% = mocno podbity',
+              value: contrastPercent,
+              min: -100,
+              max: 100,
+              step: 1,
+              valueFormatter: (value) => '${value.toStringAsFixed(0)}%',
+              onChanged: (val) => setState(() => contrastPercent = val),
               onChangeEnd: (_) => updatePreview(),
             ),
             const SizedBox(height: 12),
