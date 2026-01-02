@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:aplikacja_notatki/models/note.dart';
+import 'package:aplikacja_notatki/constants/category_constants.dart';
 
 class NoteWithFile {
   final Note note;
@@ -35,6 +36,52 @@ class NotesRepository {
       await imagesDir.create(recursive: true);
     }
     return imagesDir.path;
+  }
+
+  Future<String> _getCategoriesFilePath() async {
+    final notesDirPath = await _getNotesDirectoryPath();
+    return p.join(notesDirPath, 'categories.json');
+  }
+
+  Future<List<String>> loadCategories() async {
+    final filePath = await _getCategoriesFilePath();
+    final file = File(filePath);
+    if (!(await file.exists())) {
+      return [defaultCategory];
+    }
+
+    try {
+      final content = await file.readAsString();
+      final json = jsonDecode(content);
+      if (json is List) {
+        final categories = json.map((c) => c.toString()).toSet().toList();
+        if (!categories.contains(defaultCategory)) {
+          categories.add(defaultCategory);
+        }
+        categories.sort();
+        return categories;
+      }
+    } catch (error) {
+      debugPrint(
+        'lib/data/notes_repository.dart loadCategories failed: $error',
+      );
+    }
+
+    return [defaultCategory];
+  }
+
+  Future<void> saveCategories(List<String> categories) async {
+    final filePath = await _getCategoriesFilePath();
+    final file = File(filePath);
+    final normalized = categories
+        .where((category) => category.trim().isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    if (!normalized.contains(defaultCategory)) {
+      normalized.insert(0, defaultCategory);
+    }
+    await file.writeAsString(jsonEncode(normalized));
   }
 
   Future<String> _saveImageToPermanentStorage({
@@ -173,8 +220,8 @@ class NotesRepository {
           }
         }
 
-        if (!updatedCategories.contains('All')) {
-          updatedCategories.add('All');
+        if (!updatedCategories.contains(defaultCategory)) {
+          updatedCategories.add(defaultCategory);
         }
 
         final oldSet = note.categories.toSet();

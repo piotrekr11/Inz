@@ -181,14 +181,24 @@ class SavedNotesScreenState extends State<SavedNotesScreen> {
             padding: const EdgeInsets.all(8.0),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: _controller.selectedCategories
-                    .map((c) => Chip(
-                  label: Text(c),
-                ))
-                    .toList(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Wybrane kategorie:',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: _controller.selectedCategories
+                        .map((c) => Chip(
+                      label: Text(c),
+                    ))
+                        .toList(),
+                  ),
+                ],
               ),
             ),
           ),

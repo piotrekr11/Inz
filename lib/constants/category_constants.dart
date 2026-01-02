@@ -1,1 +1,1 @@
-const String defaultCategory = 'All';
+const String defaultCategory = 'Wszystkie';

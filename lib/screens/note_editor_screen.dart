@@ -117,8 +117,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final text = controller.text.trim();
 
     if (title.isEmpty || text.isEmpty) {
+      final message = title.isEmpty && text.isEmpty
+          ? 'Uzupełnij tytuł i treść notatki'
+          : title.isEmpty
+          ? 'Wprowadź tytuł notatki'
+          : 'Wprowadź treść notatki';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Wprowadź tytuł notatki")),
+        SnackBar(content: Text(message)),
       );
       return;
     }
@@ -136,13 +141,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         return CategoryPickerDialog(
           availableCategories: _controller.availableCategories,
           selectedCategories: _controller.selectedCategories,
-          onAddCategory: (newCategory) {
+          onAddCategory: (newCategory) async {
             if (!mounted) return;
-            _controller.addAvailableCategory(newCategory);
+            await _controller.addAvailableCategory(newCategory);
           },
           onRenameCategory: (oldCategory, renamed) async {
             if (!mounted) return;
-            _controller.renameCategory(oldCategory, renamed);
+            await _controller.renameCategory(oldCategory, renamed);
             await _rewriteCategoryInStoredNotes(
               oldCategory,
               newCategory: renamed,
@@ -150,7 +155,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           },
           onDeleteCategory: (category) async {
             if (!mounted) return;
-            _controller.removeCategory(category);
+            await _controller.removeCategory(category);
             await _rewriteCategoryInStoredNotes(category);
           },
         );

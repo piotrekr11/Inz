@@ -40,7 +40,7 @@ class NotesController extends ChangeNotifier {
     final paired = await _notesRepository.loadNotes();
     _notes = paired.map((pair) => pair.note).toList();
     _files = paired.map((pair) => pair.file).toList();
-    _updateAvailableCategories();
+    await _loadStoredCategories();
     notifyListeners();
   }
 
@@ -48,25 +48,11 @@ class NotesController extends ChangeNotifier {
     await _notesRepository.deleteNote(_notes[index], _files[index]);
     _notes.removeAt(index);
     _files.removeAt(index);
-    _updateAvailableCategories();
     notifyListeners();
   }
 
   Future<void> loadAvailableCategories({Note? existingNote}) async {
-    final categorySet = <String>{defaultCategory};
-    final notesWithFiles = await _notesRepository.loadNotes();
-    for (final noteWithFile in notesWithFiles) {
-      categorySet.addAll(noteWithFile.note.categories);
-    }
-
-    if (existingNote != null) {
-      categorySet.addAll(existingNote.categories);
-    }
-
-    _availableCategories = categorySet.toList()..sort();
-    if (!_selectedCategories.contains(defaultCategory)) {
-      _selectedCategories = [defaultCategory, ..._selectedCategories];
-    }
+    await _loadStoredCategories(existingNote: existingNote);
     notifyListeners();
   }
 
@@ -89,14 +75,15 @@ class NotesController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addAvailableCategory(String category) {
+  Future<void> addAvailableCategory(String category) async {
     if (_availableCategories.contains(category)) return;
     _availableCategories.add(category);
     _availableCategories.sort();
+    await _notesRepository.saveCategories(_availableCategories);
     notifyListeners();
   }
 
-  void renameCategory(String oldCategory, String renamed) {
+  Future<void> renameCategory(String oldCategory, String renamed) async {
     _availableCategories.remove(oldCategory);
     if (!_availableCategories.contains(renamed)) {
       _availableCategories.add(renamed);
@@ -105,22 +92,35 @@ class NotesController extends ChangeNotifier {
     _selectedCategories = _selectedCategories
         .map((category) => category == oldCategory ? renamed : category)
         .toList();
+    await _notesRepository.saveCategories(_availableCategories);
     notifyListeners();
   }
 
-  void removeCategory(String category) {
+  Future<void> removeCategory(String category) async {
     _availableCategories.remove(category);
     _selectedCategories.remove(category);
+    _selectedCategories = _normalizeSelected(_selectedCategories);
+    await _notesRepository.saveCategories(_availableCategories);
     notifyListeners();
   }
 
-  void _updateAvailableCategories() {
-    final categorySet = <String>{defaultCategory};
+  Future<void> _loadStoredCategories({Note? existingNote}) async {
+    final stored = await _notesRepository.loadCategories();
+    final categorySet = <String>{...stored};
     for (final note in _notes) {
       categorySet.addAll(note.categories);
     }
-    _availableCategories = categorySet.toList()..sort();
+    if (existingNote != null) {
+      categorySet.addAll(existingNote.categories);
+    }
+    categorySet.add(defaultCategory);
+    final merged = categorySet.toList()..sort();
+    _availableCategories = merged;
     _selectedCategories = _normalizeSelected(_selectedCategories);
+    if (merged.toSet().length != stored.toSet().length ||
+        !merged.toSet().containsAll(stored)) {
+      await _notesRepository.saveCategories(merged);
+    }
   }
 
   List<String> _normalizeSelected(List<String> categories) {
